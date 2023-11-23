@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Range Circles on Google Maps</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        .map-container {
+            border: solid 2px;
+            border-radius: 3px;
+            overflow: hidden;
+            text-align: center;
+            /* height: 100vh; */
+            height: 100%;
+        }
+
+        .map-container #locationInput {
+            border: solid 2px;
+            margin-top: -2px;
+            height: 32px;
+            padding: 0px 10px;
+            border-radius: 5px;
+            min-width: 200px;
+        }
+
+        .map-container #map {
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+        }
+
+
+        .map-container .range-label {
+            transform: rotate(40deg) scale(1.2);
+        }
+
+        .map-container .gmnoprint {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="map-container">
+        <input id="locationInput" type="text" placeholder="Starting Location Input" />
+        <div id="map"></div>
+    </div>
+
+
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAP_API_KEY&libraries=geometry,places&callback=initMap"
+        async defer></script>
+
+    <script>
+        const setting = {
+            lat: 52.52000659,
+            lng: 13.404954,
+            distance: 600000,
+            labelFont: 8,
+            initZoom: 3,
+            minZoom: 3,
+            maxZoom: 6,
+            ranges: [
+                { hr: 3, stroke: '#be37f3', fill: '#be37f3' },
+                { hr: 2.5, stroke: '#50d767', fill: '#50d767' },
+                { hr: 2, stroke: '#1618f9', fill: '#1618f9' },
+                { hr: 1.5, stroke: '#fa2f42', fill: '#fa2f42' },
+                { hr: 1, stroke: '#fdcf2e', fill: '#fdcf2e' },
+                { hr: 0, stroke: '#fa9006', fill: '#094a02', opacity: 1 },
+            ]
+        }
+
+        let map, elements = [];
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: setting.lat, lng: setting.lng },
+                zoom: setting.initZoom,
+                minZoom: setting.minZoom,
+                maxZoom: setting.maxZoom,
+                disableDefaultUI: true,
+            });
+
+            // Draw the initial Items
+            // drawElements(map, setting.lat, setting.lng)
+
+            google.maps.event.addListener(map, 'zoom_changed', function () {
+                updateLabelSize(map.getZoom())
+            });
+
+
+            const autocomplete = new google.maps.places.Autocomplete(document.getElementById('locationInput'));
+
+            autocomplete.bindTo('bounds', map);
+
+            autocomplete.addListener('place_changed', function () {
+                const place = autocomplete.getPlace();
+                if (!place.geometry) {
+                    window.alert('No details available for input: ' + place.name);
+                    return;
+                }
+
+                // Remove Elements
+                removeElements()
+
+                map.setCenter(place.geometry.location);
+
+                // Redraw Elements
+                drawElements(map, place.geometry.location.lat(), place.geometry.location.lng())
+            });
+        }
+
+        // Draw label and circles
+        function drawElements(map, lat, lng) {
+            for (const el of setting.ranges) {
+                if (el.hr === 0) {
+                    addMarker(map, { lat, lng }, el.stroke, el.fill)
+                } else {
+                    const circle = createRangeCircle(map, { lat, lng }, setting.distance * el.hr, el.stroke, el.fill);
+                    addLabel(map, circle, `${el.hr} hour`);
+                }
+            }
+        }
+
+        // Remove elements
+        function removeElements(position) {
+            elements.forEach(function (el) {
+                el.setMap(null);
+            });
+            elements = [];
+        }
+
+        // Add Marker
+        function addMarker(map, position, stroke, fill) {
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 6,
+                    fillColor: fill,
+                    fillOpacity: 0.8,
+                    strokeColor: stroke,
+                    strokeWeight: 2
+                }
+            });
+
+            elements.push(marker)
+        }
+
+        // Add Circle
+        function createRangeCircle(map, position, radius, strokeColor = '#FF0000', fillColor = '#FF0000', opacity) {
+            const circleEl = new google.maps.Circle({
+                strokeColor,
+                strokeOpacity: opacity ?? 1,
+                strokeWeight: 2,
+                fillColor,
+                fillOpacity: opacity ?? 0.2,
+                map: map,
+                center: position,
+                radius,
+            });
+
+            elements.push(circleEl)
+            return circleEl;
+        }
+
+        // Add Label
+        function addLabel(map, circle, radius) {
+            const center = circle.getCenter();
+            const labelPosition = google.maps.geometry.spherical.computeOffset(center, circle.getRadius() - setting.distance / 3.5, 40);
+
+            const labelEl = new google.maps.Marker({
+                position: labelPosition,
+                map: map,
+                label: {
+                    text: radius,
+                    fontFamily: "fantasy",
+                    fontSize: setting.labelFont + 'px',
+                    fontWeight: '100',
+                    color: '#fff',
+                    className: 'range-label',
+                },
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 0
+                }
+            });
+            elements.push(labelEl)
+        }
+
+        // Update the label size
+        function updateLabelSize(zoom) {
+            const elements = document.querySelectorAll('.range-label');
+            elements.forEach(element => {
+                element.style.transform = `rotate(40deg) scale(${1.2 * zoom / setting.initZoom})`;
+            });
+        }
+    </script>
+</body>
+
+</html>
