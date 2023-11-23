@@ -8,7 +8,7 @@ This is a range calculation map with the location auto search functionality usin
 
 Provide step-by-step instructions on how to install your project locally. For example:
 
-1. Clone the repo: `git clone https://github.com/yourusername/your-repo.git`
+1. Clone the repo: `git clone https://github.com/bronsky1/range-map.git`
 2. Generate the Google Map API from Google Developer Console
     - Enable the Google Map JavaScript service
     - Enable the Google Map Places service
